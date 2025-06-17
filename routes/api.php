@@ -7,6 +7,8 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\TrainerController;
+use App\Http\Controllers\SessionController;
+use App\Http\Controllers\TaskController;
 
 // User registration route
 Route::post('/register', [RegisterController::class, 'register']);
@@ -23,17 +25,35 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::middleware(['auth:sanctum'])->prefix('trainer/clients')->controller(TrainerController::class)->group(function () {
-    Route::get('/', 'clients');
-    Route::post('/', 'addClient');
-    Route::post('/addTemp', 'addTempClient');
-    Route::get('{id}', 'getClient');
-    Route::put('{id}', 'updateClient');
-    Route::delete('{id}', 'deleteClient');
+    Route::get('/', 'clients');                        // List all clients for the authenticated trainer
+    Route::post('/', 'addClient');                     // Add a new client
+    Route::post('/addTemp', 'addTempClient');          // Add a temporary client (for testing purposes)
+    Route::get('{id}', 'getClient');                   // Get a specific client by ID
+    Route::put('{id}', 'updateClient');                // Update client details
+    Route::delete('{id}', 'deleteClient');             // Delete a client
 });
 
 Route::middleware('auth:sanctum')->controller(MessageController::class)->group(function () {
     Route::get('/conversations', 'conversations');     // List all conversations
-    Route::get('/messages', 'getAllMessages');
+    Route::get('/messages', 'getAllMessages');         // Get all messages for the authenticated user
     Route::get('/messages/{userId}', 'getMessages');   // Get chat history
     Route::post('/messages', 'sendMessage');           // Send a new message
+});
+
+Route::middleware('auth:sanctum')->prefix('sessions')->controller(SessionController::class)->group(function () {
+    Route::post('/', 'create');                       // Trainer creates a session
+    Route::get('/', 'index');                         // Trainer's upcoming sessions
+    Route::get('/client', 'clientSessions');          // Client's upcoming sessions
+    Route::put('/{id}', 'update');                    // Update session details
+    Route::delete('/{id}', 'cancel');                 // Cancel session
+});
+
+Route::middleware('auth:sanctum')->prefix('tasks')->controller(TaskController::class)->group(function () {
+    Route::get('/', 'index');                         // Get all tasks for authenticated user
+    Route::post('/', 'store');                        // Create a new task
+    Route::get('/statistics', 'statistics');          // Get task statistics
+    Route::get('/{task}', 'show');                    // Get specific task
+    Route::put('/{task}', 'update');                  // Update task
+    Route::delete('/{task}', 'destroy');              // Delete task
+    Route::patch('/{task}/complete', 'markCompleted'); // Mark task as completed
 });

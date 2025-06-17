@@ -7,9 +7,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class UserModel extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
+
+    protected $table = 'users';
 
     protected $fillable = [
         'first_name',
@@ -42,12 +44,17 @@ class User extends Authenticatable
 
     public function clients()
     {
-        return $this->belongsToMany(User::class, 'trainer_client', 'trainer_id', 'client_id')->withTimestamps();
+        return $this->belongsToMany(UserModel::class, 'trainer_client', 'trainer_id', 'client_id')->withTimestamps();
     }
 
     public function trainers()
     {
-        return $this->belongsToMany(User::class, 'trainer_client', 'client_id', 'trainer_id')->withTimestamps();
+        return $this->belongsToMany(UserModel::class, 'trainer_client', 'client_id', 'trainer_id')->withTimestamps();
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany(TaskModel::class, 'user_id');
     }
 
     // public function gym()
@@ -60,6 +67,8 @@ class User extends Authenticatable
     {
         return trim("{$this->first_name} {$this->last_name}");
     }
+
+    
 
     
 }

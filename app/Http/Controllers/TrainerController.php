@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\UserModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -47,7 +48,7 @@ class TrainerController extends Controller
             'password'   => 'required|string|min:6',
         ]);
 
-        $client = User::create([
+        $client = UserModel::create([
             'first_name' => $validated['first_name'],
             'last_name'  => $validated['last_name'] ?? null,
             'email'      => $validated['email'],
@@ -77,7 +78,7 @@ class TrainerController extends Controller
             'email'      => 'nullable|email|unique:users,email',
         ]);
 
-        $client = User::create([
+        $client = UserModel::create([
             'first_name' => $validated['first_name'],
             'last_name'  => $validated['last_name'] ?? null,
             'email'      => $validated['email'] ?? null,
@@ -96,7 +97,7 @@ class TrainerController extends Controller
 
     public function upgradeTempClient(Request $request, $id)
     {
-        $client = User::findOrFail($id);
+        $client = UserModel::findOrFail($id);
 
         if (!$client->is_temp) {
             return response()->json(['message' => 'Not a temp client'], 400);

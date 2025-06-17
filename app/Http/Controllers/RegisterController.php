@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Models\UseModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -17,7 +17,7 @@ class RegisterController extends Controller
             'role' => 'required|string|in:client,trainer,gym_owner,admin',
         ]);
 
-        $user = User::create([
+        $user = UserModel::create([
             'name' => $fields['name'],
             'email' => $fields['email'],
             'password' => bcrypt($fields['password']),
