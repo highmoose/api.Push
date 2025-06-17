@@ -9,6 +9,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\DietPlanController;
 
 // User registration route
 Route::post('/register', [RegisterController::class, 'register']);
@@ -56,4 +57,12 @@ Route::middleware('auth:sanctum')->prefix('tasks')->controller(TaskController::c
     Route::put('/{task}', 'update');                  // Update task
     Route::delete('/{task}', 'destroy');              // Delete task
     Route::patch('/{task}/complete', 'markCompleted'); // Mark task as completed
+});
+
+Route::middleware('auth:sanctum')->prefix('diet-plans')->controller(DietPlanController::class)->group(function () {
+    Route::get('/', 'index');                         // Get all diet plans for authenticated trainer
+    Route::post('/generate', 'generate');             // Generate a new diet plan using AI
+    Route::get('/{id}', 'show');                      // Get specific diet plan
+    Route::put('/{id}', 'update');                    // Update diet plan
+    Route::delete('/{id}', 'destroy');                // Delete diet plan
 });
