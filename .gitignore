@@ -1,4 +1,4 @@
-/.phpunit.cache
+﻿/.phpunit.cache
 /node_modules
 /public/build
 /public/hot
@@ -9,6 +9,7 @@
 .env
 .env.backup
 .env.production
+.env.local
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -21,3 +22,19 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Test files that might contain sensitive data
+test_*.php
+debug_*.php
+temp_*.php
+
+# API keys and secrets (additional protection)
+*.key
+*.pem
+*.p12
+secrets.json
+credentials.json
+
+# OS specific files
+.DS_Store
+Thumbs.db
