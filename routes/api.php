@@ -72,4 +72,6 @@ Route::middleware('auth:sanctum')->prefix('diet-plans')->controller(DietPlanCont
     Route::get('/{id}', 'show');                      // Get specific diet plan
     Route::put('/{id}', 'update');                    // Update diet plan
     Route::delete('/{id}', 'destroy');                // Delete diet plan
+    Route::post('/{id}/assign', 'assignToClient');    // Assign diet plan to client
+    Route::post('/{id}/duplicate', 'duplicate');      // Duplicate diet plan
 });

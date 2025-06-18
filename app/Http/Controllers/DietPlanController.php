@@ -134,24 +134,303 @@ class DietPlanController extends Controller
         }
     }
 
+    /**
+     * Get all diet plans for the authenticated trainer
+     */
     public function index()
     {
-        return response()->json(['success' => true, 'message' => 'Index working']);
+        try {
+            $trainerId = Auth::id();
+            
+            $plans = DB::table('diet_plans')
+                ->leftJoin('users', 'diet_plans.client_id', '=', 'users.id')
+                ->where('diet_plans.trainer_id', $trainerId)
+                ->whereNull('diet_plans.deleted_at')
+                ->select(
+                    'diet_plans.*',
+                    DB::raw('CONCAT(users.first_name, " ", users.last_name) as client_name')
+                )
+                ->orderBy('diet_plans.created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'plans' => $plans
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching diet plans', [
+                'error' => $e->getMessage(),
+                'trainer_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch diet plans: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
+    /**
+     * Get a specific diet plan with its items
+     */
     public function show($id)
     {
-        return response()->json(['success' => true, 'message' => 'Show working', 'id' => $id]);
+        try {
+            $trainerId = Auth::id();
+            
+            $plan = DB::table('diet_plans')
+                ->leftJoin('users', 'diet_plans.client_id', '=', 'users.id')
+                ->where('diet_plans.id', $id)
+                ->where('diet_plans.trainer_id', $trainerId)
+                ->whereNull('diet_plans.deleted_at')
+                ->select(
+                    'diet_plans.*',
+                    DB::raw('CONCAT(users.first_name, " ", users.last_name) as client_name')
+                )
+                ->first();
+
+            if (!$plan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Diet plan not found'
+                ], 404);
+            }
+
+            // Get plan items
+            $items = DB::table('diet_plan_items')
+                ->where('diet_plan_id', $id)
+                ->orderBy('meal_order')
+                ->get();
+                
+            $plan->items = $items;
+
+            return response()->json([
+                'success' => true,
+                'plan' => $plan
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching diet plan', [
+                'error' => $e->getMessage(),
+                'plan_id' => $id,
+                'trainer_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch diet plan: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Assign a diet plan to a client
+     */
+    public function assignToClient(Request $request, $planId)
     {
-        return response()->json(['success' => true, 'message' => 'Update working', 'id' => $id]);
+        try {
+            $request->validate([
+                'client_id' => 'required|integer|exists:users,id'
+            ]);
+
+            $trainerId = Auth::id();
+            
+            // Verify the plan belongs to this trainer
+            $plan = DB::table('diet_plans')
+                ->where('id', $planId)
+                ->where('trainer_id', $trainerId)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if (!$plan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Diet plan not found'
+                ], 404);
+            }
+
+            // Update the client assignment
+            DB::table('diet_plans')
+                ->where('id', $planId)
+                ->update([
+                    'client_id' => $request->client_id,
+                    'updated_at' => now()
+                ]);
+
+            // Get updated plan with client info
+            $updatedPlan = DB::table('diet_plans')
+                ->leftJoin('users', 'diet_plans.client_id', '=', 'users.id')
+                ->where('diet_plans.id', $planId)
+                ->select(
+                    'diet_plans.*',
+                    DB::raw('CONCAT(users.first_name, " ", users.last_name) as client_name')
+                )
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'plan' => $updatedPlan,
+                'message' => 'Diet plan assigned successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error assigning diet plan', [
+                'error' => $e->getMessage(),
+                'plan_id' => $planId,
+                'trainer_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to assign diet plan: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
-    public function destroy($id)
+    /**
+     * Duplicate a diet plan
+     */
+    public function duplicate(Request $request, $planId)
     {
-        return response()->json(['success' => true, 'message' => 'Destroy working', 'id' => $id]);
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'client_id' => 'nullable|integer|exists:users,id'
+            ]);
+
+            $trainerId = Auth::id();
+            
+            // Get the original plan
+            $originalPlan = DB::table('diet_plans')
+                ->where('id', $planId)
+                ->where('trainer_id', $trainerId)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if (!$originalPlan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Original diet plan not found'
+                ], 404);
+            }
+
+            // Create new plan
+            $newPlanId = DB::table('diet_plans')->insertGetId([
+                'trainer_id' => $trainerId,
+                'client_id' => $request->client_id,
+                'title' => $request->title,
+                'description' => $originalPlan->description,
+                'plan_type' => $originalPlan->plan_type,
+                'meals_per_day' => $originalPlan->meals_per_day,
+                'meal_complexity' => $originalPlan->meal_complexity,
+                'total_calories' => $originalPlan->total_calories,
+                'generated_by_ai' => $originalPlan->generated_by_ai,
+                'ai_prompt' => $originalPlan->ai_prompt,
+                'ai_response' => $originalPlan->ai_response,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // Copy plan items
+            $originalItems = DB::table('diet_plan_items')
+                ->where('diet_plan_id', $planId)
+                ->get();
+
+            foreach ($originalItems as $item) {
+                DB::table('diet_plan_items')->insert([
+                    'diet_plan_id' => $newPlanId,
+                    'meal_name' => $item->meal_name,
+                    'meal_type' => $item->meal_type,
+                    'ingredients' => $item->ingredients,
+                    'instructions' => $item->instructions,
+                    'calories' => $item->calories,
+                    'protein' => $item->protein,
+                    'carbs' => $item->carbs,
+                    'fats' => $item->fats,
+                    'meal_order' => $item->meal_order,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
+            // Get the new plan with client info
+            $newPlan = DB::table('diet_plans')
+                ->leftJoin('users', 'diet_plans.client_id', '=', 'users.id')
+                ->where('diet_plans.id', $newPlanId)
+                ->select(
+                    'diet_plans.*',
+                    DB::raw('CONCAT(users.first_name, " ", users.last_name) as client_name')
+                )
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'plan' => $newPlan,
+                'message' => 'Diet plan duplicated successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error duplicating diet plan', [
+                'error' => $e->getMessage(),
+                'plan_id' => $planId,
+                'trainer_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to duplicate diet plan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a diet plan
+     */
+    public function destroy($planId)
+    {
+        try {
+            $trainerId = Auth::id();
+            
+            // Verify the plan belongs to this trainer
+            $plan = DB::table('diet_plans')
+                ->where('id', $planId)
+                ->where('trainer_id', $trainerId)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if (!$plan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Diet plan not found'
+                ], 404);
+            }
+
+            // Soft delete the plan
+            DB::table('diet_plans')
+                ->where('id', $planId)
+                ->update([
+                    'deleted_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Diet plan deleted successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error deleting diet plan', [
+                'error' => $e->getMessage(),
+                'plan_id' => $planId,
+                'trainer_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete diet plan: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -216,7 +495,15 @@ class DietPlanController extends Controller
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $apiKey,
             'Content-Type' => 'application/json',
-        ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
+        ])
+        ->withOptions([
+            'verify' => false,
+            'curl' => [
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
+            ]
+        ])
+        ->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
             'model' => 'gpt-3.5-turbo',
             'messages' => [
                 [
