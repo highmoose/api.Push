@@ -12,9 +12,14 @@ class CreateDietPlanItemsTable extends Migration
             $table->id();
             $table->foreignId('diet_plan_id')->constrained()->cascadeOnDelete();
             $table->string('meal_name');
-            $table->text('ingredients')->nullable();
-            $table->decimal('calories', 6, 2)->nullable();
-            $table->string('time_of_day')->nullable(); // e.g., breakfast, lunch
+            $table->string('meal_type')->default('meal'); // breakfast, lunch, dinner, snack
+            $table->json('ingredients')->nullable();
+            $table->text('instructions')->nullable();
+            $table->integer('calories')->default(0);
+            $table->integer('protein')->default(0);
+            $table->integer('carbs')->default(0);
+            $table->integer('fats')->default(0);
+            $table->integer('meal_order')->default(1);
             $table->timestamps();
         });
     }
