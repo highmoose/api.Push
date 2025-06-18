@@ -7,6 +7,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\TrainerController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\DietPlanController;
@@ -32,6 +33,10 @@ Route::middleware(['auth:sanctum'])->prefix('trainer/clients')->controller(Train
     Route::get('{id}', 'getClient');                   // Get a specific client by ID
     Route::put('{id}', 'updateClient');                // Update client details
     Route::delete('{id}', 'deleteClient');             // Delete a client
+});
+
+Route::middleware(['auth:sanctum'])->prefix('client')->controller(ClientController::class)->group(function () {
+    Route::get('/trainer', 'getTrainer');              // Get trainer info for the authenticated client
 });
 
 Route::middleware('auth:sanctum')->controller(MessageController::class)->group(function () {
