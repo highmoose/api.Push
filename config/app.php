@@ -69,6 +69,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Default User Timezone
+    |--------------------------------------------------------------------------
+    |
+    | This is the default timezone for users when they haven't set one.
+    | This will be used for displaying times in the frontend.
+    |
+    */
+
+    'default_user_timezone' => env('DEFAULT_USER_TIMEZONE', 'Europe/London'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supported Timezones
+    |--------------------------------------------------------------------------
+    |
+    | List of timezones that users can select from in their settings.
+    |
+    */
+
+    'supported_timezones' => [
+        'Europe/London' => 'UK (GMT/BST)',
+        'America/New_York' => 'US Eastern (EST/EDT)',
+        'America/Chicago' => 'US Central (CST/CDT)',
+        'America/Denver' => 'US Mountain (MST/MDT)',
+        'America/Los_Angeles' => 'US Pacific (PST/PDT)',
+        'UTC' => 'UTC',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

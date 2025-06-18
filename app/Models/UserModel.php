@@ -25,6 +25,7 @@ class UserModel extends Authenticatable
         'gym',
         'date_of_birth',
         'gym_id',
+        'timezone',
     ];
 
     protected $hidden = [

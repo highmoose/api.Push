@@ -26,10 +26,9 @@ class SessionController extends Controller
             'equipment_needed'   => 'nullable|string|max:1000',
             'preparation_notes'  => 'nullable|string|max:1000',
             'goals'              => 'nullable|string|max:1000',
-        ]);
-
-        $authUser = Auth::user();
+        ]);        $authUser = Auth::user();
         $clientId = $request->client_id;
+        $userTimezone = $authUser->timezone ?? config('app.default_user_timezone', 'Europe/London');
 
         // Load the client to check relationship
         $client = User::findOrFail($clientId);
@@ -61,12 +60,24 @@ class SessionController extends Controller
             return response()->json(['error' => 'Only clients and trainers can create sessions'], 403);
         }
 
+        // Parse the scheduled_at time from user's timezone and convert to UTC for storage
+        $scheduledAtUTC = null;
+        if ($request->scheduled_at) {
+            try {
+                $dt = new \DateTime($request->scheduled_at, new \DateTimeZone($userTimezone));
+                $dt->setTimezone(new \DateTimeZone('UTC'));
+                $scheduledAtUTC = $dt->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                return response()->json(['error' => 'Invalid datetime format'], 422);
+            }
+        }
+
         $session = SessionModel::create([
             'trainer_id'         => $trainerId,
             'client_id'          => $clientId,
             'gym_id'             => $request->gym_id,
-            'start_time'         => $request->scheduled_at,
-            'end_time'           => Carbon::parse($request->scheduled_at)->addMinutes((int) $request->duration),
+            'start_time'         => $scheduledAtUTC,
+            'end_time'           => $scheduledAtUTC ? Carbon::parse($scheduledAtUTC)->addMinutes((int) $request->duration) : null,
             'status'             => $status,
             'notes'              => $request->notes,
             'session_type'       => $request->session_type ?? 'general',
@@ -101,45 +112,53 @@ class SessionController extends Controller
             'last_name'         => $session->client->last_name,
             'created_at'        => $session->created_at,
             'updated_at'        => $session->updated_at,
-        ], 201);
-    }
+        ], 201);    }
 
     // GET /api/sessions (trainer)
     public function index(Request $request)
-{
-    $trainerId = Auth::id();
-    $includePast = $request->query('include_past', false);
+    {
+        $user = Auth::user();
+        $trainerId = $user->id;
+        $userTimezone = $user->timezone ?? config('app.default_user_timezone', 'Europe/London');
+        $includePast = $request->query('include_past', false);
 
-    $query = SessionModel::with(['client:id,first_name,last_name,gym']) // only load needed fields
-        ->where('trainer_id', $trainerId);    // if (!$includePast) {
-    //     $query->where('start_time', '>=', now())
-    //           ->where('status', '!=', 'cancelled');
-    // }
+        $query = SessionModel::with(['client:id,first_name,last_name,gym,timezone']) // include client timezone
+            ->where('trainer_id', $trainerId);
 
-    $sessions = $query->orderBy('start_time')->get()->map(function ($session) {
-        return [
-            'id'                => $session->id,
-            'client_id'         => $session->client->id,
-            'trainer_id'        => $session->trainer_id,
-            'start_time'        => $session->start_time,
-            'end_time'          => $session->end_time,
-            'status'            => $session->status,
-            'notes'             => $session->notes,
-            'session_type'      => $session->session_type,
-            'location'          => $session->location,
-            'rate'              => $session->rate,
-            'equipment_needed'  => $session->equipment_needed,
-            'preparation_notes' => $session->preparation_notes,
-            'goals'             => $session->goals,
-            'duration'          => $session->duration,
-            'first_name'        => $session->client->first_name,
-            'last_name'         => $session->client->last_name,
-            'gym'               => $session->client->gym,
-        ];
-    });
+        // if (!$includePast) {
+        //     $query->where('start_time', '>=', now())
+        //           ->where('status', '!=', 'cancelled');
+        // }
 
-    return response()->json($sessions);
-}
+        $sessions = $query->orderBy('start_time')->get()->map(function ($session) use ($userTimezone) {
+            // Convert times to user's timezone for display
+            $startTime = $session->start_time ? $session->start_time->setTimezone($userTimezone)->format('Y-m-d H:i:s') : null;
+            $endTime = $session->end_time ? $session->end_time->setTimezone($userTimezone)->format('Y-m-d H:i:s') : null;
+
+            return [
+                'id'                => $session->id,
+                'client_id'         => $session->client->id,
+                'trainer_id'        => $session->trainer_id,
+                'start_time'        => $startTime,
+                'end_time'          => $endTime,
+                'status'            => $session->status,
+                'notes'             => $session->notes,
+                'session_type'      => $session->session_type,
+                'location'          => $session->location,
+                'rate'              => $session->rate,
+                'equipment_needed'  => $session->equipment_needed,
+                'preparation_notes' => $session->preparation_notes,
+                'goals'             => $session->goals,
+                'duration'          => $session->duration,
+                'first_name'        => $session->client->first_name,
+                'last_name'         => $session->client->last_name,
+                'gym'               => $session->client->gym,
+                'user_timezone'     => $userTimezone, // Include timezone info for frontend
+            ];
+        });
+
+        return response()->json($sessions);
+    }
 
 
     // GET /api/sessions/client
@@ -157,6 +176,32 @@ class SessionController extends Controller
     }
 
     // PUT /api/sessions/{id}
+    // PUT /api/sessions/{id}/status - Update only status without touching datetime
+    public function updateStatus(Request $request, $id)
+    {
+        $session = SessionModel::findOrFail($id);
+        $userId = Auth::id();
+
+        if ($session->trainer_id !== $userId && $session->client_id !== $userId) {
+            return response()->json(['error' => 'Unauthorised'], 403);
+        }
+
+        $request->validate([
+            'status' => 'required|in:scheduled,completed,pending,cancelled',
+        ]);
+
+        // Only update the status field, don't touch any datetime fields
+        $session->status = $request->status;
+        $session->save();
+
+        // Return minimal response to avoid datetime serialization issues
+        return response()->json([
+            'id' => $session->id,
+            'status' => $session->status,
+            'message' => 'Status updated successfully'
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $session = SessionModel::findOrFail($id);
@@ -172,11 +217,22 @@ class SessionController extends Controller
             'status'       => 'nullable|in:scheduled,completed,pending,cancelled',
             'gym_id'       => 'nullable|exists:gyms,id',
             'notes'        => 'nullable|string|max:1000',
-        ]);
-
+        ]);        // Handle datetime updates with timezone conversion
         if ($request->filled('scheduled_at') && $request->filled('duration')) {
-            $session->start_time = $request->scheduled_at;
-            $session->end_time   = Carbon::parse($request->scheduled_at)->addMinutes($request->duration);
+            try {
+                // Parse the datetime from user's timezone and convert to UTC for storage
+                $user = Auth::user();
+                $userTimezone = $user->timezone ?? config('app.default_user_timezone', 'Europe/London');
+                
+                $dt = new \DateTime($request->scheduled_at, new \DateTimeZone($userTimezone));
+                $dt->setTimezone(new \DateTimeZone('UTC'));
+                $scheduledAtUTC = $dt->format('Y-m-d H:i:s');
+                
+                $session->start_time = $scheduledAtUTC;
+                $session->end_time = Carbon::parse($scheduledAtUTC)->addMinutes($request->duration);
+            } catch (\Exception $e) {
+                return response()->json(['error' => 'Invalid datetime format'], 422);
+            }
         }
 
         if ($request->has('status')) {
@@ -189,11 +245,39 @@ class SessionController extends Controller
 
         if ($request->has('notes')) {
             $session->notes = $request->notes;
-        }
+        }        $session->save();        // Load the client relationship for the response
+        $session->load('client:id,first_name,last_name');
 
-        $session->save();
+        // Get user timezone for response
+        $user = Auth::user();
+        $userTimezone = $user->timezone ?? config('app.default_user_timezone', 'Europe/London');
 
-        return response()->json($session);
+        // Convert times back to user's timezone for response
+        $startTimeUser = $session->start_time ? $session->start_time->setTimezone($userTimezone)->format('Y-m-d H:i:s') : null;
+        $endTimeUser = $session->end_time ? $session->end_time->setTimezone($userTimezone)->format('Y-m-d H:i:s') : null;
+
+        // Return the session with all fields including client info
+        return response()->json([
+            'id'                => $session->id,
+            'client_id'         => $session->client_id,
+            'trainer_id'        => $session->trainer_id,
+            'start_time'        => $startTimeUser,
+            'end_time'          => $endTimeUser,
+            'status'            => $session->status,
+            'notes'             => $session->notes,
+            'session_type'      => $session->session_type,
+            'location'          => $session->location,
+            'rate'              => $session->rate,
+            'equipment_needed'  => $session->equipment_needed,
+            'preparation_notes' => $session->preparation_notes,
+            'goals'             => $session->goals,
+            'duration'          => $session->duration,
+            'first_name'        => $session->client->first_name,
+            'last_name'         => $session->client->last_name,
+            'created_at'        => $session->created_at,
+            'updated_at'        => $session->updated_at,
+            'user_timezone'     => $userTimezone,
+        ]);
     }
 
     // DELETE /api/sessions/{id}

@@ -35,6 +35,37 @@ class SessionModel extends Model
         'updated_at' => 'datetime',
     ];
 
+    // Timezone-aware datetime formatting
+    public function getStartTimeForTimezone($timezone = null)
+    {
+        $timezone = $timezone ?? config('app.default_user_timezone', 'UTC');
+        return $this->start_time ? $this->start_time->setTimezone($timezone)->format('Y-m-d H:i:s') : null;
+    }
+
+    public function getEndTimeForTimezone($timezone = null)
+    {
+        $timezone = $timezone ?? config('app.default_user_timezone', 'UTC');
+        return $this->end_time ? $this->end_time->setTimezone($timezone)->format('Y-m-d H:i:s') : null;
+    }
+
+    // Store datetime in user's timezone but convert to UTC for database
+    public function setDatetimeFromUserTimezone($field, $datetime, $userTimezone = null)
+    {
+        if (empty($datetime)) {
+            $this->{$field} = null;
+            return;
+        }
+
+        $userTimezone = $userTimezone ?? config('app.default_user_timezone', 'UTC');
+        
+        // Parse the datetime assuming it's in the user's timezone
+        $dt = new \DateTime($datetime, new \DateTimeZone($userTimezone));
+        // Convert to UTC for storage
+        $dt->setTimezone(new \DateTimeZone('UTC'));
+        
+        $this->{$field} = $dt->format('Y-m-d H:i:s');
+    }
+
     public $timestamps = true;
 
     // 🧑 Relationships
