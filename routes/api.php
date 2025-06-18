@@ -46,7 +46,8 @@ Route::middleware('auth:sanctum')->prefix('sessions')->controller(SessionControl
     Route::get('/', 'index');                         // Trainer's upcoming sessions
     Route::get('/client', 'clientSessions');          // Client's upcoming sessions
     Route::put('/{id}', 'update');                    // Update session details
-    Route::delete('/{id}', 'cancel');                 // Cancel session
+    Route::patch('/{id}/cancel', 'cancel');           // Cancel session (change status)
+    Route::delete('/{id}', 'destroy');                // Permanently delete session
 });
 
 Route::middleware('auth:sanctum')->prefix('tasks')->controller(TaskController::class)->group(function () {

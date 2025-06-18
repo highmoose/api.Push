@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Carbon\Carbon;
 
 class DietPlanController extends Controller
 {
@@ -40,12 +41,23 @@ class DietPlanController extends Controller
                 $client = DB::table('users')->find($request->client_id);
                 if ($client) {
                     $clientInfo = "\nClient: {$client->first_name} {$client->last_name}";
-                    if ($client->age) $clientInfo .= "\nAge: {$client->age}";
-                    if ($client->weight) $clientInfo .= "\nWeight: {$client->weight}kg";
-                    if ($client->height) $clientInfo .= "\nHeight: {$client->height}cm";
-                    if ($client->activity_level) $clientInfo .= "\nActivity Level: {$client->activity_level}";
-                    if ($client->fitness_goals) $clientInfo .= "\nFitness Goals: {$client->fitness_goals}";
-                    if ($client->dietary_restrictions) $clientInfo .= "\nDietary Restrictions: {$client->dietary_restrictions}";
+                    
+                    // Calculate age from date_of_birth if available
+                    if (isset($client->date_of_birth) && $client->date_of_birth) {
+                        $age = \Carbon\Carbon::parse($client->date_of_birth)->age;
+                        $clientInfo .= "\nAge: {$age}";
+                    }
+                    
+                    if (isset($client->location) && $client->location) $clientInfo .= "\nLocation: {$client->location}";
+                    if (isset($client->gym) && $client->gym) $clientInfo .= "\nGym: {$client->gym}";
+                    
+                    // Note: The following fields don't exist in the current users table schema
+                    // If you need these fields, consider adding them to the users table or creating a separate user_profiles table
+                    // if (isset($client->weight) && $client->weight) $clientInfo .= "\nWeight: {$client->weight}kg";
+                    // if (isset($client->height) && $client->height) $clientInfo .= "\nHeight: {$client->height}cm";
+                    // if (isset($client->activity_level) && $client->activity_level) $clientInfo .= "\nActivity Level: {$client->activity_level}";
+                    // if (isset($client->fitness_goals) && $client->fitness_goals) $clientInfo .= "\nFitness Goals: {$client->fitness_goals}";
+                    // if (isset($client->dietary_restrictions) && $client->dietary_restrictions) $clientInfo .= "\nDietary Restrictions: {$client->dietary_restrictions}";
                 }
             }
 

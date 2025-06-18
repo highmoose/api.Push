@@ -169,4 +169,20 @@ class SessionController extends Controller
 
         return response()->json(['message' => 'Session cancelled.']);
     }
+
+    // DELETE /api/sessions/{id}/delete - Permanently delete session
+    public function destroy($id)
+    {
+        $session = SessionModel::findOrFail($id);
+        $userId = Auth::id();
+
+        // Only trainer should be able to permanently delete sessions
+        if ($session->trainer_id !== $userId) {
+            return response()->json(['error' => 'Only the trainer can delete sessions'], 403);
+        }
+
+        $session->delete();
+
+        return response()->json(['message' => 'Session deleted successfully.']);
+    }
 }

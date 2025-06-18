@@ -9,48 +9,10 @@ use Illuminate\Support\Str;
 
 class TrainerController extends Controller
 {    public function clients(Request $request)
-    {        // Temporary bypass for testing - remove when database is set up
+    {
+        // Ensure user is authenticated
         if (!Auth::check()) {
-            // For testing purposes, return mock data even without authentication
-            $mockClients = [
-                [
-                    'id' => 1,
-                    'first_name' => 'John',
-                    'last_name' => 'Doe',
-                    'email' => 'john.doe@example.com',
-                    'role' => 'client',
-                    'is_temp' => false,
-                    'created_at' => '2024-01-15T10:00:00Z',
-                ],
-                [
-                    'id' => 2,
-                    'first_name' => 'Jane',
-                    'last_name' => 'Smith',
-                    'email' => 'jane.smith@example.com',
-                    'role' => 'client',
-                    'is_temp' => false,
-                    'created_at' => '2024-02-20T14:30:00Z',
-                ],
-                [
-                    'id' => 3,
-                    'first_name' => 'Mike',
-                    'last_name' => 'Wilson',
-                    'email' => 'mike.wilson@example.com',
-                    'role' => 'client',
-                    'is_temp' => true,
-                    'created_at' => '2024-03-10T09:15:00Z',
-                ],
-            ];
-
-            if ($search = $request->query('search')) {
-                $mockClients = array_filter($mockClients, function($client) use ($search) {
-                    return stripos($client['first_name'], $search) !== false ||
-                           stripos($client['last_name'], $search) !== false ||
-                           stripos($client['email'], $search) !== false;
-                });
-            }
-
-            return response()->json(['clients' => array_values($mockClients)]);
+            return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         $user = Auth::user();
@@ -59,52 +21,10 @@ class TrainerController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        // Temporary mock data for testing frontend
-        $mockClients = [
-            [
-                'id' => 1,
-                'first_name' => 'John',
-                'last_name' => 'Doe',
-                'email' => 'john.doe@example.com',
-                'role' => 'client',
-                'is_temp' => false,
-                'created_at' => '2024-01-15T10:00:00Z',
-            ],
-            [
-                'id' => 2,
-                'first_name' => 'Jane',
-                'last_name' => 'Smith',
-                'email' => 'jane.smith@example.com',
-                'role' => 'client',
-                'is_temp' => false,
-                'created_at' => '2024-02-20T14:30:00Z',
-            ],
-            [
-                'id' => 3,
-                'first_name' => 'Mike',
-                'last_name' => 'Wilson',
-                'email' => 'mike.wilson@example.com',
-                'role' => 'client',
-                'is_temp' => true,
-                'created_at' => '2024-03-10T09:15:00Z',
-            ],
-        ];
-
-        // Apply search filter if provided
-        if ($search = $request->query('search')) {
-            $mockClients = array_filter($mockClients, function($client) use ($search) {
-                return stripos($client['first_name'], $search) !== false ||
-                       stripos($client['last_name'], $search) !== false ||
-                       stripos($client['email'], $search) !== false;
-            });
-        }
-
-        return response()->json(['clients' => array_values($mockClients)]);
-
-        // Original database code (uncomment when database is set up):
-        /*
+        // Get clients from database
         $query = $user->clients();
 
+        // Apply search filter if provided
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
@@ -116,7 +36,6 @@ class TrainerController extends Controller
         $clients = $query->get()->makeHidden(['pivot']);
 
         return response()->json(['clients' => $clients]);
-        */
     }
 
     public function addClient(Request $request)
