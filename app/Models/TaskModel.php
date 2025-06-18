@@ -68,14 +68,7 @@ class TaskModel extends Model
     public function scopeCompleted($query)
     {
         return $query->where('status', 'completed');
-    }
-
-    public function scopeInProgress($query)
-    {
-        return $query->where('status', 'in-progress');
-    }
-
-    public function scopeOverdue($query)
+    }    public function scopeOverdue($query)
     {
         return $query->where('due_date', '<', now())
                     ->where('status', '!=', 'completed');
@@ -105,17 +98,7 @@ class TaskModel extends Model
             'status' => 'completed',
             'completed_at' => now(),
         ]);
-    }
-
-    public function markAsInProgress()
-    {
-        $this->update([
-            'status' => 'in-progress',
-            'completed_at' => null,
-        ]);
-    }
-
-    public function markAsPending()
+    }    public function markAsPending()
     {
         $this->update([
             'status' => 'pending',
@@ -136,14 +119,7 @@ class TaskModel extends Model
     public function isPending(): bool
     {
         return $this->status === 'pending';
-    }
-
-    public function isInProgress(): bool
-    {
-        return $this->status === 'in-progress';
-    }
-
-    protected function serializeDate($date)
+    }    protected function serializeDate($date)
     {
         // Return datetime in local format without timezone conversion
         return $date->format('Y-m-d\TH:i:s');

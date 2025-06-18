@@ -14,12 +14,18 @@ class SessionController extends Controller
     public function create(Request $request)
     {
         $request->validate([
-            'client_id'    => 'required|exists:users,id',
-            'scheduled_at' => 'required|date',
-            'duration'     => 'required|integer|min:1',
-            'gym_id'       => 'nullable|exists:gyms,id',
-            'notes'        => 'nullable|string|max:1000',
-            'status'       => 'nullable|in:scheduled,pending,completed,cancelled',
+            'client_id'          => 'required|exists:users,id',
+            'scheduled_at'       => 'required|date',
+            'duration'           => 'required|integer|min:1',
+            'gym_id'             => 'nullable|exists:gyms,id',
+            'notes'              => 'nullable|string|max:1000',
+            'status'             => 'nullable|in:scheduled,pending,completed,cancelled',
+            'session_type'       => 'nullable|string|max:100',
+            'location'           => 'nullable|string|max:255',
+            'rate'               => 'nullable|numeric|min:0',
+            'equipment_needed'   => 'nullable|string|max:1000',
+            'preparation_notes'  => 'nullable|string|max:1000',
+            'goals'              => 'nullable|string|max:1000',
         ]);
 
         $authUser = Auth::user();
@@ -56,16 +62,46 @@ class SessionController extends Controller
         }
 
         $session = SessionModel::create([
-            'trainer_id' => $trainerId,
-            'client_id'  => $clientId,
-            'gym_id'     => $request->gym_id,
-            'start_time' => $request->scheduled_at,
-            'end_time'   => Carbon::parse($request->scheduled_at)->addMinutes((int) $request->duration),
-            'status'     => $status,
-            'notes'      => $request->notes,
+            'trainer_id'         => $trainerId,
+            'client_id'          => $clientId,
+            'gym_id'             => $request->gym_id,
+            'start_time'         => $request->scheduled_at,
+            'end_time'           => Carbon::parse($request->scheduled_at)->addMinutes((int) $request->duration),
+            'status'             => $status,
+            'notes'              => $request->notes,
+            'session_type'       => $request->session_type ?? 'general',
+            'location'           => $request->location,
+            'rate'               => $request->rate ?? 0,
+            'equipment_needed'   => $request->equipment_needed,
+            'preparation_notes'  => $request->preparation_notes,
+            'goals'              => $request->goals,
+            'duration'           => $request->duration,
         ]);
 
-        return response()->json($session, 201);
+        // Load the client relationship for the response
+        $session->load('client:id,first_name,last_name');
+
+        // Return the session with all fields including client info
+        return response()->json([
+            'id'                => $session->id,
+            'client_id'         => $session->client_id,
+            'trainer_id'        => $session->trainer_id,
+            'start_time'        => $session->start_time,
+            'end_time'          => $session->end_time,
+            'status'            => $session->status,
+            'notes'             => $session->notes,
+            'session_type'      => $session->session_type,
+            'location'          => $session->location,
+            'rate'              => $session->rate,
+            'equipment_needed'  => $session->equipment_needed,
+            'preparation_notes' => $session->preparation_notes,
+            'goals'             => $session->goals,
+            'duration'          => $session->duration,
+            'first_name'        => $session->client->first_name,
+            'last_name'         => $session->client->last_name,
+            'created_at'        => $session->created_at,
+            'updated_at'        => $session->updated_at,
+        ], 201);
     }
 
     // GET /api/sessions (trainer)
@@ -75,24 +111,30 @@ class SessionController extends Controller
     $includePast = $request->query('include_past', false);
 
     $query = SessionModel::with(['client:id,first_name,last_name,gym']) // only load needed fields
-        ->where('trainer_id', $trainerId);
-
-    // if (!$includePast) {
+        ->where('trainer_id', $trainerId);    // if (!$includePast) {
     //     $query->where('start_time', '>=', now())
     //           ->where('status', '!=', 'cancelled');
     // }
 
     $sessions = $query->orderBy('start_time')->get()->map(function ($session) {
         return [
-            'id'          => $session->id,
-            'client_id'   => $session->client->id,
-            'start_time'  => $session->start_time,
-            'end_time'    => $session->end_time,
-            'status'      => $session->status,
-            'notes'       => $session->notes,
-            'first_name'  => $session->client->first_name,
-            'last_name'   => $session->client->last_name,
-            'gym'         => $session->client->gym,
+            'id'                => $session->id,
+            'client_id'         => $session->client->id,
+            'trainer_id'        => $session->trainer_id,
+            'start_time'        => $session->start_time,
+            'end_time'          => $session->end_time,
+            'status'            => $session->status,
+            'notes'             => $session->notes,
+            'session_type'      => $session->session_type,
+            'location'          => $session->location,
+            'rate'              => $session->rate,
+            'equipment_needed'  => $session->equipment_needed,
+            'preparation_notes' => $session->preparation_notes,
+            'goals'             => $session->goals,
+            'duration'          => $session->duration,
+            'first_name'        => $session->client->first_name,
+            'last_name'         => $session->client->last_name,
+            'gym'               => $session->client->gym,
         ];
     });
 

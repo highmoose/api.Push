@@ -19,6 +19,13 @@ class SessionModel extends Model
         'end_time',
         'status',
         'notes',
+        'session_type',
+        'location',
+        'rate',
+        'equipment_needed',
+        'preparation_notes',
+        'goals',
+        'duration',
     ];
 
     protected $casts = [

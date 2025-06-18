@@ -40,7 +40,7 @@ class TaskController extends Controller
 
         // Sort by due date, then by priority
         $tasks = $query->orderBy('due_date', 'asc')
-                      ->orderByRaw("FIELD(priority, 'high', 'medium', 'low')")
+                      ->orderByRaw("FIELD(priority, 'high', 'medium', 'low', 'none')")
                       ->get();
 
         return response()->json([
@@ -58,9 +58,9 @@ class TaskController extends Controller
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'duration' => 'nullable|integer|min:15|max:480',
-            'priority' => ['required', Rule::in(['low', 'medium', 'high'])],
+            'priority' => ['required', Rule::in(['none', 'low', 'medium', 'high'])],
             'category' => ['required', Rule::in(['general', 'client-related', 'equipment', 'administrative'])],
-            'status' => ['nullable', Rule::in(['pending', 'in-progress', 'completed'])],
+            'status' => ['nullable', Rule::in(['pending', 'completed'])],
             'reminder' => 'nullable|array',
             'reminder.enabled' => 'boolean',
             'reminder.time' => 'nullable|string|in:15min,30min,1hour,1day',
@@ -113,9 +113,9 @@ class TaskController extends Controller
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'duration' => 'nullable|integer|min:15|max:480',
-            'priority' => ['sometimes', 'required', Rule::in(['low', 'medium', 'high'])],
+            'priority' => ['sometimes', 'required', Rule::in(['none', 'low', 'medium', 'high'])],
             'category' => ['sometimes', 'required', Rule::in(['general', 'client-related', 'equipment', 'administrative'])],
-            'status' => ['sometimes', 'required', Rule::in(['pending', 'in-progress', 'completed'])],
+            'status' => ['sometimes', 'required', Rule::in(['pending', 'completed'])],
             'reminder' => 'nullable|array',
             'reminder.enabled' => 'boolean',
             'reminder.time' => 'nullable|string|in:15min,30min,1hour,1day',
