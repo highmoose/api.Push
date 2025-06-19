@@ -461,7 +461,12 @@ class DietPlanController extends Controller
         $prompt .= "      \"name\": \"Meal Name\",\n";
         $prompt .= "      \"type\": \"breakfast/lunch/dinner/snack\",\n";
         $prompt .= "      \"order\": 1,\n";
-        $prompt .= "      \"ingredients\": [\"ingredient1\", \"ingredient2\"],\n";
+        $prompt .= "      \"ingredients\": [\n";
+        $prompt .= "        {\n";
+        $prompt .= "          \"name\": \"ingredient name\",\n";
+        $prompt .= "          \"amount\": \"quantity with unit (e.g., 200g, 1 cup, 2 pieces)\"\n";
+        $prompt .= "        }\n";
+        $prompt .= "      ],\n";
         $prompt .= "      \"instructions\": \"Preparation instructions\",\n";
         $prompt .= "      \"calories\": 400,\n";
         $prompt .= "      \"protein\": 25,\n";
@@ -504,7 +509,7 @@ class DietPlanController extends Controller
             ]
         ])
         ->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
-            'model' => 'gpt-3.5-turbo',
+            'model' => 'gpt-4.1-mini',
             'messages' => [
                 [
                     'role' => 'system',
@@ -515,7 +520,7 @@ class DietPlanController extends Controller
                     'content' => $prompt
                 ]
             ],
-            'max_tokens' => 2000,
+            'max_tokens' => 3500,
             'temperature' => 0.7
         ]);
 
