@@ -39,6 +39,18 @@ Route::middleware(['auth:sanctum'])->prefix('client')->controller(ClientControll
     Route::get('/trainer', 'getTrainer');              // Get trainer info for the authenticated client
 });
 
+// Enhanced client management routes (for trainers)
+Route::middleware(['auth:sanctum'])->prefix('clients')->controller(ClientController::class)->group(function () {
+    Route::post('/', 'store');                         // Create a new client with full details
+    Route::put('/{id}', 'update');                     // Update client information
+    Route::post('/invite', 'sendInvite');              // Send client invitation
+});
+
+// Public client invitation routes (no auth required)
+Route::prefix('clients')->controller(ClientController::class)->group(function () {
+    Route::post('/accept-invite', 'acceptInvite');     // Accept invitation and complete registration
+});
+
 Route::middleware('auth:sanctum')->controller(MessageController::class)->group(function () {
     Route::get('/conversations', 'conversations');     // List all conversations
     Route::get('/messages', 'getAllMessages');         // Get all messages for the authenticated user

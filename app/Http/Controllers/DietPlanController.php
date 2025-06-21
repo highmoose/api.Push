@@ -51,13 +51,16 @@ class DietPlanController extends Controller
                     if (isset($client->location) && $client->location) $clientInfo .= "\nLocation: {$client->location}";
                     if (isset($client->gym) && $client->gym) $clientInfo .= "\nGym: {$client->gym}";
                     
-                    // Note: The following fields don't exist in the current users table schema
-                    // If you need these fields, consider adding them to the users table or creating a separate user_profiles table
-                    // if (isset($client->weight) && $client->weight) $clientInfo .= "\nWeight: {$client->weight}kg";
-                    // if (isset($client->height) && $client->height) $clientInfo .= "\nHeight: {$client->height}cm";
-                    // if (isset($client->activity_level) && $client->activity_level) $clientInfo .= "\nActivity Level: {$client->activity_level}";
-                    // if (isset($client->fitness_goals) && $client->fitness_goals) $clientInfo .= "\nFitness Goals: {$client->fitness_goals}";
-                    // if (isset($client->dietary_restrictions) && $client->dietary_restrictions) $clientInfo .= "\nDietary Restrictions: {$client->dietary_restrictions}";
+                    // Enhanced client fields for better diet plan generation
+                    if (isset($client->weight) && $client->weight) $clientInfo .= "\nWeight: {$client->weight}kg";
+                    if (isset($client->height) && $client->height) $clientInfo .= "\nHeight: {$client->height}cm";
+                    if (isset($client->fitness_level) && $client->fitness_level) $clientInfo .= "\nFitness Level: {$client->fitness_level}";
+                    if (isset($client->fitness_goals) && $client->fitness_goals) $clientInfo .= "\nFitness Goals: {$client->fitness_goals}";
+                    if (isset($client->fitness_experience) && $client->fitness_experience) $clientInfo .= "\nFitness Experience: {$client->fitness_experience}";
+                    if (isset($client->food_likes) && $client->food_likes) $clientInfo .= "\nFood Preferences (Likes): {$client->food_likes}";
+                    if (isset($client->food_dislikes) && $client->food_dislikes) $clientInfo .= "\nFood Dislikes: {$client->food_dislikes}";
+                    if (isset($client->allergies) && $client->allergies) $clientInfo .= "\nAllergies: {$client->allergies}";
+                    if (isset($client->medical_conditions) && $client->medical_conditions) $clientInfo .= "\nMedical Conditions: {$client->medical_conditions}";
                 }
             }
 
@@ -481,7 +484,9 @@ class DietPlanController extends Controller
         $prompt .= "    \"fats\": 65\n";
         $prompt .= "  }\n";
         $prompt .= "}\n\n";
-        $prompt .= "Please ensure the response is valid JSON only, with no additional text or formatting.";
+        $prompt .= "IMPORTANT: Each ingredient MUST be an object with both 'name' and 'amount' properties. ";
+        $prompt .= "The 'amount' should include specific quantities and units (e.g., '200g chicken breast', '1 cup rice', '2 tbsp olive oil'). ";
+        $prompt .= "Never use simple strings for ingredients. Please ensure the response is valid JSON only, with no additional text or formatting.";
         
         return $prompt;
     }
@@ -577,7 +582,7 @@ class DietPlanController extends Controller
                     [
                         'name' => 'Balanced Breakfast',
                         'type' => 'breakfast',
-                        'order' => 1,
+                    'order' => 1,
                         'ingredients' => ['Oatmeal', 'Banana', 'Almonds', 'Greek Yogurt'],
                         'instructions' => 'Cook oatmeal and top with sliced banana, almonds, and a dollop of Greek yogurt',
                         'calories' => 400,

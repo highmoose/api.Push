@@ -26,6 +26,22 @@ class UserModel extends Authenticatable
         'date_of_birth',
         'gym_id',
         'timezone',
+        // Enhanced client fields
+        'address',
+        'height',
+        'weight',
+        'fitness_goals',
+        'fitness_experience',
+        'fitness_level',
+        'measurements',
+        'food_likes',
+        'food_dislikes',
+        'allergies',
+        'medical_conditions',
+        'notes',
+        'invite_token',
+        'invite_sent_at',
+        'invite_accepted_at',
     ];
 
     protected $hidden = [
